@@ -11,7 +11,7 @@ import {
   DEFAULT_CODE_EXTENSIONS
 } from "./types";
 import { normalizeExtension, normalizeLanguage } from "./utils";
-import { CodeFileView } from "./code-view";
+import { CodeEditorView } from "./code-editor-view";
 import { CustomFileExtensionsSettingTab } from "./settings";
 import EditExtensionModal from "./edit-modal";
 import { PLUGIN_STYLES } from "./styles";
@@ -28,10 +28,10 @@ export class CustomFileExtensions extends Plugin {
     this.injectStyles();
     await this.loadSettings();
 
-    // Register our custom code file view
+    // Register our custom code editor view
     this.registerView(
       CODE_FILE_VIEW_TYPE,
-      (leaf: WorkspaceLeaf) => new CodeFileView(leaf, this)
+      (leaf: WorkspaceLeaf) => new CodeEditorView(leaf, this)
     );
 
     const viewRegistry = (this.app as any).viewRegistry;
@@ -241,14 +241,16 @@ export class CustomFileExtensions extends Plugin {
   }
 
   refreshOpenLeaves(): void {
-    // 1. Update open CodeFileView leaves
+    // 1. Update open CodeEditorView leaves
     const codeLeaves = this.app.workspace.getLeavesOfType(CODE_FILE_VIEW_TYPE);
     for (const leaf of codeLeaves) {
       const file = (leaf.view as any)?.file;
       if (file) {
         const ext = normalizeExtension(file.extension);
         if (this.isCodeExtension(ext)) {
-          (leaf.view as CodeFileView).renderCode();
+          if (leaf.view instanceof CodeEditorView) {
+            leaf.view.reconfigureLanguage();
+          }
         } else {
           // No longer configured as code, switch back to markdown if needed
           leaf.setViewState({

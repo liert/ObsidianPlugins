@@ -163,23 +163,23 @@ export class CustomFileExtensionsSettingTab extends PluginSettingTab {
         return toggle;
       });
 
-    // --- Section: Code Block Style File Rendering ---
+    // --- Section: Code Editor File Extensions ---
     containerEl.createEl("h3", {
-      text: "Code Block Style File Rendering",
+      text: "Code Editor File Extensions",
       cls: "cfe-code-section-title"
     });
 
     const codeDesc = containerEl.createEl("p", {
-      text: "Allow specifying file extensions to render as syntax-highlighted code blocks instead of plain Markdown documents. Original files remain completely unmodified."
+      text: "Allow specifying file extensions to open directly in a clean CodeMirror 6 code editor with syntax highlighting. Changes are saved back to the original files."
     });
     codeDesc.style.color = "var(--text-muted)";
     codeDesc.style.fontSize = "var(--font-ui-smaller)";
 
     // Master Toggle
     new Setting(containerEl)
-      .setName("Enable Code Block Rendering")
+      .setName("Enable Code Editor")
       .setDesc(
-        "When enabled, files with extensions configured below will be displayed as syntax-highlighted code blocks."
+        "When enabled, files with extensions configured below will open in the code editor instead of plain Markdown documents."
       )
       .addToggle((toggle) => {
         toggle

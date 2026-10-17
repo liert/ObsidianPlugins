@@ -9,6 +9,8 @@
     "isolatedModules": false,
     "strictNullChecks": true,
     "lib": ["DOM", "ES2020"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts"]
