@@ -1,0 +1,48 @@
+{
+  "types": {
+    "markdown": [
+      "py"
+    ]
+  },
+  "configIsValid": true,
+  "errors": {},
+  "allowMdOverride": false,
+  "mobileSettings": {
+    "enabled": false,
+    "configIsValid": true,
+    "types": {
+      "markdown": [
+        "",
+        "md",
+        "txt",
+        "js",
+        "css",
+        "ts",
+        "jsx",
+        "tsx",
+        "yaml",
+        "yml",
+        "sass",
+        "scss",
+        "tex",
+        "json",
+        "html"
+      ]
+    }
+  },
+  "codeRendering": {
+    "enabled": true,
+    "extensions": {
+      "java": "java",
+      "c": "c",
+      "h": "c",
+      "cpp": "cpp",
+      "hpp": "cpp",
+      "py": "python",
+      "lua": "lua",
+      "json": "json",
+      "xml": "xml",
+      "log": "text"
+    }
+  }
+}
