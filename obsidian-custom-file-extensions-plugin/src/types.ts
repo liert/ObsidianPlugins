@@ -1,6 +1,8 @@
 export interface CodeRenderingSettings {
   enabled: boolean;
   extensions: Record<string, string>;
+  tabSize: number;
+  useTabChar: boolean;
 }
 
 export interface CustomFileExtensionsSettings {
@@ -63,6 +65,8 @@ export const DEFAULT_SETTINGS: CustomFileExtensionsSettings = {
   },
   codeRendering: {
     enabled: true,
-    extensions: DEFAULT_CODE_EXTENSIONS
+    extensions: DEFAULT_CODE_EXTENSIONS,
+    tabSize: 4,
+    useTabChar: false
   }
 };

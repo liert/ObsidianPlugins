@@ -42,8 +42,7 @@ export const obsidianCodeTheme = EditorView.theme({
     overflow: "auto",
     fontFamily: "var(--font-monospace)",
     lineHeight: "var(--line-height-tight, 1.5)",
-    padding: "8px 0",
-    tabSize: "4"
+    padding: "8px 0"
   },
   ".cm-content": {
     caretColor: "var(--text-accent, var(--interactive-accent))",

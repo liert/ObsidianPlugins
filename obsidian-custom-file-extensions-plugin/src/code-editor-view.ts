@@ -7,6 +7,8 @@ import {
 import {
   EditorState,
   Compartment,
+  EditorSelection,
+  Prec,
   type Extension
 } from "@codemirror/state";
 import {
@@ -25,9 +27,11 @@ import {
   defaultKeymap,
   history,
   historyKeymap,
-  indentWithTab
+  indentMore,
+  indentLess,
+  insertNewlineAndIndent
 } from "@codemirror/commands";
-import { bracketMatching, indentOnInput } from "@codemirror/language";
+import { bracketMatching, indentOnInput, indentUnit } from "@codemirror/language";
 
 import type CustomFileExtensions from "./main";
 import { CODE_FILE_VIEW_TYPE } from "./types";
@@ -45,6 +49,7 @@ export class CodeEditorView extends TextFileView {
 
   private editorView: EditorView | null = null;
   private languageCompartment = new Compartment();
+  private indentCompartment = new Compartment();
 
   constructor(leaf: WorkspaceLeaf, plugin: CustomFileExtensions) {
     super(leaf);
@@ -162,9 +167,87 @@ export class CodeEditorView extends TextFileView {
     });
   }
 
+  reconfigureIndent(): void {
+    if (!this.editorView) return;
+    this.editorView.dispatch({
+      effects: this.indentCompartment.reconfigure(this.getIndentExtensions())
+    });
+  }
+
+  private getIndentExtensions(): Extension[] {
+    const tabSize = this.plugin.settings.codeRendering?.tabSize ?? 4;
+    const useTabChar = this.plugin.settings.codeRendering?.useTabChar ?? false;
+    const unitStr = useTabChar ? "\t" : " ".repeat(tabSize);
+
+    return [
+      EditorState.tabSize.of(tabSize),
+      indentUnit.of(unitStr),
+      EditorView.theme({
+        ".cm-scroller, .cm-content": {
+          tabSize: String(tabSize)
+        }
+      })
+    ];
+  }
+
+  private handleTab(view: EditorView): boolean {
+    const { state } = view;
+    if (state.readOnly) return false;
+
+    // If there is any non-empty selection range, indent the selected line(s)
+    const hasSelection = state.selection.ranges.some((r) => !r.empty);
+    if (hasSelection) {
+      return indentMore(view);
+    }
+
+    // Check if all cursors are on empty lines or within leading whitespace
+    const allInLeadingWhitespace = state.selection.ranges.every((range) => {
+      const line = state.doc.lineAt(range.from);
+      const leadingMatch = /^\s*/.exec(line.text);
+      const leadingLen = leadingMatch ? leadingMatch[0].length : 0;
+      return range.from <= line.from + leadingLen;
+    });
+
+    if (allInLeadingWhitespace) {
+      return indentMore(view);
+    }
+
+    // Cursor is after text on line: insert tab or spaces up to next tab stop
+    const useTabChar = state.facet(indentUnit) === "\t";
+    if (useTabChar) {
+      view.dispatch(
+        state.update(state.replaceSelection("\t"), {
+          scrollIntoView: true,
+          userEvent: "input"
+        })
+      );
+      return true;
+    } else {
+      const tabSize = state.tabSize || 4;
+      const changes = state.changeByRange((range) => {
+        const line = state.doc.lineAt(range.from);
+        const col = range.from - line.from;
+        const count = tabSize - (col % tabSize);
+        const insert = " ".repeat(count);
+        return {
+          changes: { from: range.from, to: range.to, insert },
+          range: EditorSelection.cursor(range.from + count)
+        };
+      });
+      view.dispatch(
+        state.update(changes, {
+          scrollIntoView: true,
+          userEvent: "input"
+        })
+      );
+      return true;
+    }
+  }
+
   private buildExtensions(lang: string): Extension[] {
     return [
       this.languageCompartment.of(getLanguageExtension(lang)),
+      this.indentCompartment.of(this.getIndentExtensions()),
       obsidianCodeTheme,
       obsidianHighlighting,
       lineNumbers(),
@@ -179,17 +262,29 @@ export class CodeEditorView extends TextFileView {
       rectangularSelection(),
       crosshairCursor(),
       highlightActiveLine(),
-      keymap.of([
-        {
-          key: "Mod-s",
-          run: () => {
-            this.save();
-            return true;
+      Prec.highest(
+        keymap.of([
+          {
+            key: "Mod-s",
+            run: () => {
+              this.save();
+              return true;
+            }
+          },
+          {
+            key: "Tab",
+            run: (view) => this.handleTab(view),
+            shift: (view) => indentLess(view)
+          },
+          {
+            key: "Enter",
+            run: insertNewlineAndIndent
           }
-        },
+        ])
+      ),
+      keymap.of([
         ...defaultKeymap,
-        ...historyKeymap,
-        indentWithTab
+        ...historyKeymap
       ]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {

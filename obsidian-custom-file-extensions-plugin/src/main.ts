@@ -78,7 +78,9 @@ export class CustomFileExtensions extends Plugin {
     if (!this.settings.codeRendering) {
       this.settings.codeRendering = {
         enabled: true,
-        extensions: { ...DEFAULT_CODE_EXTENSIONS }
+        extensions: { ...DEFAULT_CODE_EXTENSIONS },
+        tabSize: 4,
+        useTabChar: false
       };
     } else {
       if (typeof this.settings.codeRendering.enabled !== "boolean") {
@@ -89,6 +91,15 @@ export class CustomFileExtensions extends Plugin {
         typeof this.settings.codeRendering.extensions !== "object"
       ) {
         this.settings.codeRendering.extensions = { ...DEFAULT_CODE_EXTENSIONS };
+      }
+      if (
+        typeof this.settings.codeRendering.tabSize !== "number" ||
+        ![2, 4, 8].includes(this.settings.codeRendering.tabSize)
+      ) {
+        this.settings.codeRendering.tabSize = 4;
+      }
+      if (typeof this.settings.codeRendering.useTabChar !== "boolean") {
+        this.settings.codeRendering.useTabChar = false;
       }
     }
 
@@ -250,6 +261,7 @@ export class CustomFileExtensions extends Plugin {
         if (this.isCodeExtension(ext)) {
           if (leaf.view instanceof CodeEditorView) {
             leaf.view.reconfigureLanguage();
+            leaf.view.reconfigureIndent();
           }
         } else {
           // No longer configured as code, switch back to markdown if needed

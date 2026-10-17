@@ -198,6 +198,51 @@ export class CustomFileExtensionsSettingTab extends PluginSettingTab {
           });
       });
 
+    // Tab Width Setting
+    new Setting(containerEl)
+      .setName("Tab Width")
+      .setDesc("Number of spaces per indentation level (2, 4, or 8 spaces). Default is 4.")
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("2", "2 spaces")
+          .addOption("4", "4 spaces")
+          .addOption("8", "8 spaces")
+          .setValue(String(this.plugin.settings.codeRendering?.tabSize ?? 4))
+          .onChange(async (val) => {
+            const nextTabSize = parseInt(val, 10) || 4;
+            const next = {
+              ...this.plugin.settings,
+              codeRendering: {
+                ...this.plugin.settings.codeRendering,
+                tabSize: nextTabSize
+              }
+            };
+            await this.plugin.updateSettings(next);
+          });
+      });
+
+    // Indent Method Setting
+    new Setting(containerEl)
+      .setName("Indent Method")
+      .setDesc("Choose whether to use spaces or real Tab characters for indentation.")
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("spaces", "Spaces")
+          .addOption("tabs", "Tab characters")
+          .setValue(this.plugin.settings.codeRendering?.useTabChar ? "tabs" : "spaces")
+          .onChange(async (val) => {
+            const useTabs = val === "tabs";
+            const next = {
+              ...this.plugin.settings,
+              codeRendering: {
+                ...this.plugin.settings.codeRendering,
+                useTabChar: useTabs
+              }
+            };
+            await this.plugin.updateSettings(next);
+          });
+      });
+
     // Add New Extension Mapping
     let newExtInput = "";
     let newLangInput = "";

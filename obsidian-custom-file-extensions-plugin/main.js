@@ -70,7 +70,9 @@ var DEFAULT_SETTINGS = {
   },
   codeRendering: {
     enabled: true,
-    extensions: DEFAULT_CODE_EXTENSIONS
+    extensions: DEFAULT_CODE_EXTENSIONS,
+    tabSize: 4,
+    useTabChar: false
   }
 };
 
@@ -18751,7 +18753,6 @@ var defaultKeymap = /* @__PURE__ */ [
   { key: "Alt-A", mac: "Ctrl-A", run: toggleBlockComment },
   { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
 ].concat(standardKeymap);
-var indentWithTab = { key: "Tab", run: indentMore, shift: indentLess };
 
 // node_modules/@lezer/lr/dist/index.js
 var Stack = class _Stack {
@@ -24052,8 +24053,7 @@ var obsidianCodeTheme = EditorView.theme({
     overflow: "auto",
     fontFamily: "var(--font-monospace)",
     lineHeight: "var(--line-height-tight, 1.5)",
-    padding: "8px 0",
-    tabSize: "4"
+    padding: "8px 0"
   },
   ".cm-content": {
     caretColor: "var(--text-accent, var(--interactive-accent))",
@@ -24170,6 +24170,7 @@ var CodeEditorView = class extends import_obsidian.TextFileView {
     this.allowNoFile = false;
     this.editorView = null;
     this.languageCompartment = new Compartment();
+    this.indentCompartment = new Compartment();
     this.plugin = plugin;
   }
   getViewType() {
@@ -24267,9 +24268,76 @@ var CodeEditorView = class extends import_obsidian.TextFileView {
       effects: this.languageCompartment.reconfigure(getLanguageExtension(lang))
     });
   }
+  reconfigureIndent() {
+    if (!this.editorView) return;
+    this.editorView.dispatch({
+      effects: this.indentCompartment.reconfigure(this.getIndentExtensions())
+    });
+  }
+  getIndentExtensions() {
+    const tabSize = this.plugin.settings.codeRendering?.tabSize ?? 4;
+    const useTabChar = this.plugin.settings.codeRendering?.useTabChar ?? false;
+    const unitStr = useTabChar ? "	" : " ".repeat(tabSize);
+    return [
+      EditorState.tabSize.of(tabSize),
+      indentUnit.of(unitStr),
+      EditorView.theme({
+        ".cm-scroller, .cm-content": {
+          tabSize: String(tabSize)
+        }
+      })
+    ];
+  }
+  handleTab(view) {
+    const { state } = view;
+    if (state.readOnly) return false;
+    const hasSelection2 = state.selection.ranges.some((r) => !r.empty);
+    if (hasSelection2) {
+      return indentMore(view);
+    }
+    const allInLeadingWhitespace = state.selection.ranges.every((range) => {
+      const line = state.doc.lineAt(range.from);
+      const leadingMatch = /^\s*/.exec(line.text);
+      const leadingLen = leadingMatch ? leadingMatch[0].length : 0;
+      return range.from <= line.from + leadingLen;
+    });
+    if (allInLeadingWhitespace) {
+      return indentMore(view);
+    }
+    const useTabChar = state.facet(indentUnit) === "	";
+    if (useTabChar) {
+      view.dispatch(
+        state.update(state.replaceSelection("	"), {
+          scrollIntoView: true,
+          userEvent: "input"
+        })
+      );
+      return true;
+    } else {
+      const tabSize = state.tabSize || 4;
+      const changes = state.changeByRange((range) => {
+        const line = state.doc.lineAt(range.from);
+        const col = range.from - line.from;
+        const count = tabSize - col % tabSize;
+        const insert2 = " ".repeat(count);
+        return {
+          changes: { from: range.from, to: range.to, insert: insert2 },
+          range: EditorSelection.cursor(range.from + count)
+        };
+      });
+      view.dispatch(
+        state.update(changes, {
+          scrollIntoView: true,
+          userEvent: "input"
+        })
+      );
+      return true;
+    }
+  }
   buildExtensions(lang) {
     return [
       this.languageCompartment.of(getLanguageExtension(lang)),
+      this.indentCompartment.of(this.getIndentExtensions()),
       obsidianCodeTheme,
       obsidianHighlighting,
       lineNumbers(),
@@ -24284,17 +24352,29 @@ var CodeEditorView = class extends import_obsidian.TextFileView {
       rectangularSelection(),
       crosshairCursor(),
       highlightActiveLine(),
-      keymap.of([
-        {
-          key: "Mod-s",
-          run: () => {
-            this.save();
-            return true;
+      Prec.highest(
+        keymap.of([
+          {
+            key: "Mod-s",
+            run: () => {
+              this.save();
+              return true;
+            }
+          },
+          {
+            key: "Tab",
+            run: (view) => this.handleTab(view),
+            shift: (view) => indentLess(view)
+          },
+          {
+            key: "Enter",
+            run: insertNewlineAndIndent
           }
-        },
+        ])
+      ),
+      keymap.of([
         ...defaultKeymap,
-        ...historyKeymap,
-        indentWithTab
+        ...historyKeymap
       ]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
@@ -24441,6 +24521,32 @@ var CustomFileExtensionsSettingTab = class extends import_obsidian2.PluginSettin
         await this.plugin.updateSettings(next);
         this._updateList();
         this.display();
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName("Tab Width").setDesc("Number of spaces per indentation level (2, 4, or 8 spaces). Default is 4.").addDropdown((dropdown) => {
+      dropdown.addOption("2", "2 spaces").addOption("4", "4 spaces").addOption("8", "8 spaces").setValue(String(this.plugin.settings.codeRendering?.tabSize ?? 4)).onChange(async (val) => {
+        const nextTabSize = parseInt(val, 10) || 4;
+        const next = {
+          ...this.plugin.settings,
+          codeRendering: {
+            ...this.plugin.settings.codeRendering,
+            tabSize: nextTabSize
+          }
+        };
+        await this.plugin.updateSettings(next);
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName("Indent Method").setDesc("Choose whether to use spaces or real Tab characters for indentation.").addDropdown((dropdown) => {
+      dropdown.addOption("spaces", "Spaces").addOption("tabs", "Tab characters").setValue(this.plugin.settings.codeRendering?.useTabChar ? "tabs" : "spaces").onChange(async (val) => {
+        const useTabs = val === "tabs";
+        const next = {
+          ...this.plugin.settings,
+          codeRendering: {
+            ...this.plugin.settings.codeRendering,
+            useTabChar: useTabs
+          }
+        };
+        await this.plugin.updateSettings(next);
       });
     });
     let newExtInput = "";
@@ -24858,7 +24964,9 @@ var CustomFileExtensions = class extends import_obsidian4.Plugin {
     if (!this.settings.codeRendering) {
       this.settings.codeRendering = {
         enabled: true,
-        extensions: { ...DEFAULT_CODE_EXTENSIONS }
+        extensions: { ...DEFAULT_CODE_EXTENSIONS },
+        tabSize: 4,
+        useTabChar: false
       };
     } else {
       if (typeof this.settings.codeRendering.enabled !== "boolean") {
@@ -24866,6 +24974,12 @@ var CustomFileExtensions = class extends import_obsidian4.Plugin {
       }
       if (!this.settings.codeRendering.extensions || typeof this.settings.codeRendering.extensions !== "object") {
         this.settings.codeRendering.extensions = { ...DEFAULT_CODE_EXTENSIONS };
+      }
+      if (typeof this.settings.codeRendering.tabSize !== "number" || ![2, 4, 8].includes(this.settings.codeRendering.tabSize)) {
+        this.settings.codeRendering.tabSize = 4;
+      }
+      if (typeof this.settings.codeRendering.useTabChar !== "boolean") {
+        this.settings.codeRendering.useTabChar = false;
       }
     }
     if (!this.settings.errors) {
@@ -24990,6 +25104,7 @@ var CustomFileExtensions = class extends import_obsidian4.Plugin {
         if (this.isCodeExtension(ext)) {
           if (leaf.view instanceof CodeEditorView) {
             leaf.view.reconfigureLanguage();
+            leaf.view.reconfigureIndent();
           }
         } else {
           leaf.setViewState({
