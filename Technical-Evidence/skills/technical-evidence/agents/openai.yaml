@@ -1,0 +1,3 @@
+interface:
+  display_name: "Technical Evidence 文档证据"
+  short_description: "围绕文档结论组织关键观察与推导的证据链，避免逐函数挂证据和重复复制代码"

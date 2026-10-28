@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "records": {
+    "buffer-limit": {
+      "title": "请求长度限制：4096 字节（演示）",
+      "summary": "示例函数在复制前检查长度，超过 4096 字节时返回 -1。以下代码与数据均为人为构造的演示。",
+      "parameters": {
+        "最大长度": 4096,
+        "单位": "bytes",
+        "失败返回值": -1,
+        "允许等于上限": true
+      },
+      "evidence": [
+        {
+          "title": "反编译伪代码",
+          "kind": "code",
+          "language": "c",
+          "source": "演示伪代码 request.c:12–20（非真实样本）",
+          "content": "int handle_request(const void *data, uint32_t length) {\n    char buffer[4096];\n    if (!validate_length(length)) return -1;\n    copy_to_buffer(buffer, data, length);\n    return 0;\n}\n\nbool validate_length(uint32_t length) {\n    return length <= 4096;\n}"
+        },
+        {
+          "title": "长度检查汇编",
+          "kind": "code",
+          "language": "asm",
+          "source": "演示指令；参数通过 edi 传入",
+          "content": "cmp edi, 1000h\nja  reject\nmov eax, 1\nret\nreject:\nxor eax, eax\nret"
+        },
+        {
+          "title": "边界数据",
+          "kind": "data",
+          "source": "人为构造的预期数据，非真实执行结果",
+          "content": "[\n  {\"length\": 4095, \"accepted\": true},\n  {\"length\": 4096, \"accepted\": true},\n  {\"length\": 4097, \"accepted\": false}\n]"
+        },
+        {
+          "title": "推导过程与适用范围",
+          "kind": "markdown",
+          "content": "1. `0x1000 = 4096`，比较值是字节长度上限。\n2. `ja` 表示无符号大于，等于上限时通过。\n3. 调用方仅在检查通过后进入复制函数。\n\n**结论：** 示例路径接受 `0 ≤ length ≤ 4096`。\n\n> [!note] 适用范围\n> 本例不证明字符串终止符处理或其他调用路径的行为。"
+        }
+      ],
+      "callChain": {
+        "nodes": [
+          {
+            "id": "handle",
+            "label": "handle_request",
+            "description": "先检查长度；检查失败立即返回，成功后复制。",
+            "language": "c",
+            "source": "演示 request.c:12",
+            "code": "if (!validate_length(length)) return -1;\ncopy_to_buffer(buffer, data, length);"
+          },
+          {
+            "id": "validate",
+            "label": "validate_length",
+            "description": "无符号长度检查，接受等于上限的情况。",
+            "language": "c",
+            "source": "演示 request.c:22",
+            "code": "bool validate_length(uint32_t length) {\n    return length <= 4096;\n}"
+          },
+          {
+            "id": "copy",
+            "label": "copy_to_buffer",
+            "description": "此演示调用路径仅在长度检查通过后执行复制。",
+            "language": "c",
+            "source": "演示 request.c:26",
+            "code": "void copy_to_buffer(void *dst, const void *src, uint32_t length) {\n    memcpy(dst, src, length);\n}"
+          }
+        ],
+        "edges": [
+          { "from": "handle", "to": "validate", "label": "先检查长度" },
+          { "from": "handle", "to": "copy", "label": "仅在检查通过后调用" }
+        ]
+      }
+    }
+  }
+}

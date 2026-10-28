@@ -1,0 +1,9 @@
+{
+  "id": "technical-evidence",
+  "name": "Technical Evidence",
+  "version": "0.1.0",
+  "minAppVersion": "1.8.0",
+  "description": "Read concise notes and open supporting evidence or function call chains in a modal.",
+  "author": "Technical Evidence contributors",
+  "isDesktopOnly": false
+}
