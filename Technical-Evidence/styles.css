@@ -1,3 +1,6 @@
+/* ==========================================================================
+   Inline Triggers (Reading View & Live Preview)
+   ========================================================================== */
 .te-trigger {
   display: inline;
   padding: 0;
@@ -9,29 +12,51 @@
   font: inherit;
   line-height: inherit;
   text-decoration: none !important;
+  border-bottom: 1px dashed color-mix(in srgb, var(--text-accent) 45%, transparent);
   cursor: pointer;
   vertical-align: baseline;
   box-shadow: none;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
+
 .te-trigger:hover {
-  text-decoration: underline !important;
+  color: var(--text-accent-hover, var(--text-accent));
+  border-bottom-style: solid;
+  border-bottom-color: currentColor;
+  text-decoration: none !important;
 }
+
 .te-trigger:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
+  border-radius: 2px;
 }
+
 .te-trigger.te-inline-code {
   color: inherit;
+  border-bottom: none;
   text-decoration: none !important;
 }
+
 .te-trigger.te-inline-code > code {
-  padding: 0.1em 0.25em;
-  border-radius: var(--radius-s);
+  padding: 0.12em 0.35em;
+  border-radius: var(--radius-s, 4px);
   background: var(--code-background);
-  color: var(--code-normal);
+  color: var(--text-accent);
+  border: 1px solid color-mix(in srgb, var(--text-accent) 22%, var(--background-modifier-border));
   font-family: var(--font-monospace);
   font-size: var(--code-size);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+
+.te-trigger.te-inline-code:hover > code {
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--code-background));
+  border-color: color-mix(in srgb, var(--interactive-accent) 50%, var(--background-modifier-border));
+}
+
+/* ==========================================================================
+   Floating Panel Shell & Resize Handles
+   ========================================================================== */
 .te-floating-panel {
   position: fixed;
   box-sizing: border-box;
@@ -46,117 +71,857 @@
   overflow: hidden;
   background: var(--background-primary);
   color: var(--text-normal);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-l);
+  border: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
+  border-radius: var(--radius-l, 12px);
+  box-shadow: var(--shadow-l), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+
+.te-floating-panel.is-dragging,
+.te-floating-panel.is-resizing {
+  border-color: color-mix(in srgb, var(--interactive-accent) 65%, var(--background-modifier-border));
+}
+
+.te-floating-panel.is-resizing {
+  user-select: none;
+}
+
+/* Header Bar */
 .te-floating-header {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 12px 10px 16px;
   background: var(--background-secondary);
   border-bottom: 1px solid var(--background-modifier-border);
   cursor: grab;
   user-select: none;
   touch-action: none;
 }
+
+.te-floating-panel.is-dragging .te-floating-header {
+  cursor: grabbing;
+}
+
 .te-floating-title {
   flex: 1;
   min-width: 0;
   margin: 0;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: var(--radius-s, 4px);
   font-size: var(--font-ui-medium);
-  line-height: 1.5;
+  font-weight: var(--font-semibold, 600);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--text-normal);
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.te-floating-title:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+/* Close Button */
 .te-floating-close {
   flex: 0 0 auto;
-  padding: 2px 8px;
-  font-size: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s, 6px);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1;
   box-shadow: none;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
+
+.te-floating-close:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.te-floating-close:active {
+  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+}
+
+.te-floating-close:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+/* Content Area */
 .te-floating-content {
   flex: 1;
   min-height: 0;
   min-width: 0;
-  padding: 16px;
+  padding: 14px 16px 18px;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
-.te-floating-panel.is-dragging .te-floating-header { cursor: grabbing; }
-.te-floating-panel.is-resizing { user-select: none; }
-.te-resize-handle { position: absolute; z-index: 1; touch-action: none; user-select: none; }
-.te-resize-n, .te-resize-s { left: 12px; right: 12px; height: 6px; cursor: ns-resize; }
+
+/* Resize Handles */
+.te-resize-handle {
+  position: absolute;
+  z-index: 2;
+  touch-action: none;
+  user-select: none;
+}
+
+.te-resize-n,
+.te-resize-s {
+  left: 12px;
+  right: 12px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
 .te-resize-n { top: 0; }
 .te-resize-s { bottom: 0; }
-.te-resize-e, .te-resize-w { top: 12px; bottom: 12px; width: 6px; cursor: ew-resize; }
+
+.te-resize-e,
+.te-resize-w {
+  top: 12px;
+  bottom: 12px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
 .te-resize-e { right: 0; }
 .te-resize-w { left: 0; }
-.te-resize-ne, .te-resize-nw, .te-resize-se, .te-resize-sw { width: 12px; height: 12px; }
-.te-resize-ne, .te-resize-sw { cursor: nesw-resize; }
-.te-resize-nw, .te-resize-se { cursor: nwse-resize; }
+
+.te-resize-ne,
+.te-resize-nw,
+.te-resize-se,
+.te-resize-sw {
+  width: 14px;
+  height: 14px;
+}
+
+.te-resize-ne,
+.te-resize-sw { cursor: nesw-resize; }
+
+.te-resize-nw,
+.te-resize-se { cursor: nwse-resize; }
+
 .te-resize-ne { top: 0; right: 0; }
 .te-resize-nw { top: 0; left: 0; }
 .te-resize-se { bottom: 0; right: 0; }
 .te-resize-sw { bottom: 0; left: 0; }
-.te-resize-se::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 6px; height: 6px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); opacity: 0.6; }
-.te-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.te-toolbar > .te-source { min-width: 0; flex: 1; }
-.te-toolbar > button { flex-shrink: 0; }
-.te-source { color: var(--text-muted); font-size: var(--font-smallest); overflow-wrap: anywhere; }
-.te-summary { color: var(--text-normal); line-height: 1.7; }
-.te-parameters { display: grid; grid-template-columns: minmax(90px, auto) 1fr; gap: 8px 20px; padding: 12px; background: var(--background-secondary); border-radius: 8px; }
-.te-parameters dt { color: var(--text-muted); overflow-wrap: anywhere; }
-.te-parameters dd { margin: 0; font-family: var(--font-monospace); overflow-wrap: anywhere; }
-.te-tabs { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--background-modifier-border); padding: 8px 0 12px; margin-bottom: 16px; }
-.te-tabs button[aria-selected="true"] { background: var(--interactive-accent); color: var(--text-on-accent); }
-.te-panel { min-height: 160px; min-width: 0; }
-.te-modal .markdown-rendered { min-width: 0; overflow-wrap: anywhere; }
-.te-modal .markdown-rendered table { display: block; max-width: 100%; overflow-x: auto; }
-.te-modal .markdown-rendered th, .te-modal .markdown-rendered td { min-width: 8em; max-width: 24em; white-space: normal; overflow-wrap: anywhere; }
-.te-assessment { margin: 12px 0; padding: 12px; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-secondary); font-size: var(--font-small); overflow-wrap: anywhere; }
-.te-assessment p { margin: 8px 0; }
-.te-assessment ul { margin-bottom: 0; padding-inline-start: 20px; }
-.te-assessment-status { display: inline-block; font-weight: 600; }
-.te-assessment-basis { margin-inline-start: 10px; color: var(--text-muted); }
-.te-assessment-status[data-status="confirmed"] { color: var(--text-success); }
-.te-assessment-status[data-status="inferred"], .te-assessment-status[data-status="partial"] { color: var(--text-warning); }
-.te-assessment-status[data-status="unknown"] { color: var(--text-muted); }
-.te-evidence-section + .te-evidence-section { border-top: 1px solid var(--background-modifier-border); margin-top: 24px; padding-top: 8px; }
-.te-modal pre { overflow: auto; max-width: 100%; max-height: 480px; white-space: pre; }
-.te-modal pre code { white-space: pre; overflow-wrap: normal; word-break: normal; }
-.te-modal .te-function-detail h3 { overflow-wrap: anywhere; }
-.te-modal h3 { margin-top: 12px; }
-.te-hint, .te-empty { color: var(--text-muted); font-size: var(--font-small); }
-.te-error { color: var(--text-error); white-space: pre-wrap; }
-.te-diagram { width: 100%; min-width: 0; max-width: 100%; margin: 12px 0; border: 1px solid var(--background-modifier-border); border-radius: 8px; overflow: hidden; }
-.te-graph-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px; border-bottom: 1px solid var(--background-modifier-border); background: var(--background-secondary); }
-.te-graph-controls button { padding: 4px 8px; height: auto; font-size: var(--font-smallest); }
-.te-graph-controls button[aria-pressed="true"] { color: var(--text-accent); }
-.te-graph-scale { min-width: 4ch; text-align: center; font-size: var(--font-smallest); font-variant-numeric: tabular-nums; color: var(--text-muted); }
-.te-graph { width: 100%; min-width: 0; height: clamp(160px, 28vh, 280px); overflow: auto; overscroll-behavior: contain; background: var(--background-secondary); cursor: grab; user-select: none; touch-action: none; }
-.te-graph.is-panning, .te-graph.is-panning * { cursor: grabbing !important; }
-.te-graph:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
-.te-graph-stage { width: max-content; padding: 8px; }
-.te-graph-stage > svg { display: block; max-width: none !important; max-height: none !important; }
-.te-modal .mermaid:has(.te-diagram), .te-modal .block-language-mermaid:has(.te-diagram) { display: block; min-width: 0; width: 100%; overflow: visible; text-align: initial; }
-.te-edge { fill: none; stroke: var(--text-muted); stroke-width: 1.5; }
-.te-arrow { fill: var(--text-muted); }
-.te-graph-node { cursor: pointer; }
-.te-graph-node rect { fill: var(--background-primary); stroke: var(--background-modifier-border); stroke-width: 1.5; }
-.te-graph-node text { fill: var(--text-normal); font-family: var(--font-monospace); font-size: 12px; pointer-events: none; }
-.te-graph-node[aria-pressed="true"] rect, .te-graph-node:hover rect, .te-graph-node:focus rect { stroke: var(--interactive-accent); stroke-width: 2.5; }
-.te-graph-node:focus { outline: none; }
-.te-function-detail { margin-top: 20px; }
-.te-relations { font-size: var(--font-small); color: var(--text-muted); }
+
+.te-resize-se::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text-faint, var(--text-muted));
+  border-bottom: 2px solid var(--text-faint, var(--text-muted));
+  border-bottom-right-radius: 2px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.te-resize-se:hover::after,
+.te-floating-panel.is-resizing .te-resize-se::after {
+  opacity: 1;
+  border-color: var(--interactive-accent);
+}
+
+/* ==========================================================================
+   Toolbar, Navigation & Action Buttons
+   ========================================================================== */
+.te-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  margin-bottom: 14px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+}
+
+.te-toolbar > .te-source {
+  min-width: 0;
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: var(--font-smallest);
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.te-toolbar > button,
+.te-retry-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s, 6px);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller, 12px);
+  font-weight: var(--font-medium, 500);
+  line-height: 1;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.te-toolbar > button:hover,
+.te-retry-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+}
+
+.te-toolbar > button:active,
+.te-retry-btn:active {
+  transform: translateY(0.5px);
+}
+
+.te-toolbar > button:focus-visible,
+.te-retry-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.te-source {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   Summary, Assessment & Parameters
+   ========================================================================== */
+.te-summary {
+  margin: 12px 0;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  line-height: 1.65;
+}
+
+.te-assessment {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-secondary);
+  font-size: var(--font-small);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.te-assessment-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.te-assessment p {
+  margin: 8px 0 0;
+  color: var(--text-normal);
+}
+
+.te-assessment-label {
+  color: var(--text-muted);
+  font-weight: var(--font-semibold, 600);
+}
+
+.te-assessment-notice {
+  margin-top: 10px !important;
+  padding: 6px 10px;
+  border-inline-start: 3px solid var(--text-warning);
+  border-radius: 0 var(--radius-s, 4px) var(--radius-s, 4px) 0;
+  background: color-mix(in srgb, var(--text-warning) 8%, var(--background-primary));
+  font-size: var(--font-smallest);
+}
+
+.te-assessment-limitations {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--background-modifier-border);
+}
+
+.te-assessment-subheading {
+  margin: 0 !important;
+  color: var(--text-muted) !important;
+  font-size: var(--font-smallest);
+  font-weight: var(--font-semibold, 600);
+}
+
+.te-assessment ul {
+  margin: 4px 0 0;
+  padding-inline-start: 18px;
+  color: var(--text-muted);
+}
+
+.te-assessment li + li {
+  margin-top: 2px;
+}
+
+.te-assessment-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: var(--font-smallest);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.te-assessment-basis {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  line-height: 1.4;
+}
+
+.te-assessment-status[data-status="confirmed"] {
+  color: var(--text-success);
+  background: color-mix(in srgb, var(--text-success) 10%, transparent);
+}
+
+.te-assessment-status[data-status="inferred"],
+.te-assessment-status[data-status="partial"] {
+  color: var(--text-warning);
+  background: color-mix(in srgb, var(--text-warning) 10%, transparent);
+}
+
+.te-assessment-status[data-status="unknown"] {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+}
+
+.te-parameters {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) 1fr;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+}
+
+.te-parameters dt {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  overflow-wrap: anywhere;
+}
+
+.te-parameters dd {
+  margin: 0;
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: var(--radius-s, 4px);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  font-family: var(--font-monospace);
+  font-size: var(--code-size, 0.875em);
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   Segmented Tabs & Content Panels
+   ========================================================================== */
+.te-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  margin: 14px 0 16px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+}
+
+.te-tabs button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-m, 8px) - 2px);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.te-tabs button:hover:not([aria-selected="true"]) {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.te-tabs button[aria-selected="true"] {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+  border-color: var(--background-modifier-border);
+  box-shadow: var(--shadow-s, 0 1px 2px rgba(0, 0, 0, 0.06));
+}
+
+.te-tabs button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.te-panel {
+  min-height: 160px;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   Evidence Sections & Markdown Content
+   ========================================================================== */
+.te-evidence-section {
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-primary-alt, var(--background-secondary));
+}
+
+.te-evidence-section + .te-evidence-section {
+  margin-top: 12px;
+}
+
+.te-evidence-section > h3 {
+  margin: 0 0 6px;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold, 600);
+  line-height: 1.4;
+}
+
+.te-evidence-section > .te-source {
+  margin: 0 0 10px;
+  font-family: var(--font-monospace);
+}
+
+.te-modal .markdown-rendered {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.te-modal .markdown-rendered > :first-child {
+  margin-top: 0;
+}
+
+.te-modal .markdown-rendered > :last-child {
+  margin-bottom: 0;
+}
+
+.te-modal .markdown-rendered table {
+  display: block;
+  max-width: 100%;
+  margin: 10px 0;
+  border-collapse: collapse;
+  overflow-x: auto;
+  font-size: var(--font-small);
+}
+
+.te-modal .markdown-rendered th,
+.te-modal .markdown-rendered td {
+  min-width: 8em;
+  max-width: 24em;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.te-modal .markdown-rendered th {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+  text-align: start;
+}
+
+.te-modal .markdown-rendered tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--background-secondary) 45%, transparent);
+}
+
+.te-modal .markdown-rendered hr {
+  margin: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.te-modal .markdown-rendered blockquote {
+  margin: 10px 0;
+  padding: 6px 12px;
+  border-inline-start: 3px solid var(--interactive-accent);
+  background: var(--background-secondary);
+  border-radius: 0 var(--radius-s, 4px) var(--radius-s, 4px) 0;
+}
+
+.te-modal pre {
+  overflow: auto;
+  max-width: 100%;
+  max-height: 480px;
+  margin: 8px 0 0;
+  border-radius: var(--radius-s, 6px);
+  white-space: pre;
+}
+
+.te-modal pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.te-modal .te-function-detail h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-medium);
+  overflow-wrap: anywhere;
+}
+
+.te-modal h3 {
+  margin-top: 12px;
+}
+
+/* Status, Hints & Errors */
+.te-loading,
+.te-hint,
+.te-empty {
+  color: var(--text-muted);
+  font-size: var(--font-small);
+  line-height: 1.5;
+}
+
+.te-loading,
+.te-empty {
+  padding: 16px 12px;
+  text-align: center;
+  background: var(--background-secondary);
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+}
+
+.te-hint {
+  margin: 0 0 10px;
+}
+
+.te-error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--text-error) 35%, var(--background-modifier-border));
+  border-radius: var(--radius-m, 8px);
+  background: color-mix(in srgb, var(--text-error) 8%, var(--background-secondary));
+}
+
+.te-error-card > .te-error {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.te-error-card > .te-source {
+  margin: 0;
+  font-family: var(--font-monospace);
+}
+
+.te-error {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--text-error) 35%, var(--background-modifier-border));
+  border-radius: var(--radius-m, 8px);
+  background: color-mix(in srgb, var(--text-error) 8%, var(--background-secondary));
+  color: var(--text-error);
+  font-size: var(--font-small);
+  white-space: pre-wrap;
+}
+
+.te-settings-note {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller, 12px);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Diagrams, Call Graph & Function Inspector
+   ========================================================================== */
+.te-diagram {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 10px 0 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  overflow: hidden;
+  background: var(--background-secondary);
+}
+
+.te-graph-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.te-graph-controls button {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s, 5px);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  font-weight: var(--font-medium, 500);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.te-graph-controls button:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.te-graph-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.te-graph-controls button[aria-pressed="true"] {
+  color: var(--text-accent);
+  border-color: color-mix(in srgb, var(--interactive-accent) 55%, var(--background-modifier-border));
+  background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
+}
+
+.te-graph-scale {
+  min-width: 4.2ch;
+  text-align: center;
+  font-size: var(--font-smallest);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.te-graph-scale + button + button {
+  margin-inline-start: auto;
+}
+
+.te-graph {
+  width: 100%;
+  min-width: 0;
+  height: clamp(160px, 28vh, 280px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background-color: var(--background-secondary);
+  background-image: radial-gradient(var(--background-modifier-border) 1px, transparent 1px);
+  background-size: 16px 16px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  scrollbar-width: thin;
+}
+
+.te-graph.is-panning,
+.te-graph.is-panning * {
+  cursor: grabbing !important;
+}
+
+.te-graph:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.te-graph-stage {
+  width: max-content;
+  padding: 8px;
+}
+
+.te-graph-stage > svg {
+  display: block;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.te-modal .mermaid:has(.te-diagram),
+.te-modal .block-language-mermaid:has(.te-diagram) {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  overflow: visible;
+  text-align: initial;
+}
+
+.te-edge {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease;
+}
+
+.te-edge[data-active] {
+  stroke: var(--interactive-accent);
+  stroke-width: 2;
+}
+
+.te-arrow {
+  fill: var(--text-muted);
+}
+
+.te-arrow-active {
+  fill: var(--interactive-accent);
+}
+
+.te-graph-node {
+  cursor: pointer;
+}
+
+.te-graph-node rect {
+  fill: var(--background-primary);
+  stroke: var(--background-modifier-border-hover, var(--background-modifier-border));
+  stroke-width: 1.5;
+  transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+.te-graph-node text {
+  fill: var(--text-normal);
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.te-graph-node:hover rect,
+.te-graph-node:focus rect {
+  stroke: var(--interactive-accent);
+  stroke-width: 2;
+}
+
+.te-graph-node[aria-pressed="true"] rect {
+  fill: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
+  stroke: var(--interactive-accent);
+  stroke-width: 2.25;
+}
+
+.te-graph-node:focus {
+  outline: none;
+}
+
+.te-function-detail {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-primary-alt, var(--background-secondary));
+}
+
+.te-function-detail > div > .te-source {
+  margin: 0 0 8px;
+  font-family: var(--font-monospace);
+}
+
+.te-function-desc {
+  margin: 6px 0 8px;
+  color: var(--text-normal);
+  font-size: var(--font-small);
+  line-height: 1.55;
+}
+
+.te-relations {
+  margin: 8px 0 10px;
+  padding-inline-start: 0;
+  list-style: none;
+  font-family: var(--font-monospace);
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+
+.te-relations li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.te-relations li + li {
+  margin-top: 4px;
+}
+
+.te-relation-arrow {
+  color: var(--text-faint, var(--text-muted));
+  margin-inline-end: 2px;
+}
+
+.te-relation-link {
+  display: inline;
+  height: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s, 4px);
+  background: var(--background-primary);
+  color: var(--text-accent);
+  font-family: var(--font-monospace);
+  font-size: var(--font-smallest);
+  line-height: 1.4;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.te-relation-link:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+.te-relation-link:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.te-relation-label {
+  color: var(--text-muted);
+}
+
 @media (max-width: 600px) {
-  .te-toolbar { align-items: flex-start; }
-  .te-parameters { gap: 8px 12px; }
+  .te-toolbar {
+    flex-wrap: wrap;
+  }
+  .te-parameters {
+    gap: 8px 12px;
+  }
 }

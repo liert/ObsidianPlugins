@@ -82,4 +82,39 @@ describe("evidence panel browsing", () => {
     await vi.waitFor(() => expect(panel.contentEl.querySelector("a")).not.toBeNull());
     expect(panel.contentEl.textContent).not.toContain("文件已移动");
   });
+  it("highlights connected edges and jumps to callees from the function detail card", async () => {
+    const app = {} as unknown as App;
+    const load = vi.fn(async () => ({
+      type: "record" as const,
+      path: "Evidence/evidence.json",
+      record: {
+        title: "Call Chain",
+        callChain: {
+          nodes: [
+            { id: "a", label: "entry_fn", code: "call_b();" },
+            { id: "b", label: "middle_fn", code: "call_c();" },
+            { id: "c", label: "leaf_fn", code: "return 0;" }
+          ],
+          edges: [
+            { from: "a", to: "b", label: "step 1" },
+            { from: "b", to: "c", label: "step 2" }
+          ]
+        }
+      }
+    }));
+    MarkdownRenderer.render.mockImplementation(async (_app, text, target) => { target.textContent = text; });
+    const panel = new EvidenceModal(app, { load } as unknown as EvidenceRepository, { kind: "callchain", path: "Evidence/evidence.json", fragment: "demo" }, "Main.md");
+    panels.push(panel);
+    panel.open();
+    await vi.waitFor(() => expect(panel.contentEl.querySelectorAll(".te-edge")).toHaveLength(2));
+    const edges = Array.from(panel.contentEl.querySelectorAll(".te-edge"));
+    expect(edges[0]?.hasAttribute("data-active")).toBe(true);
+    expect(edges[1]?.hasAttribute("data-active")).toBe(false);
+    const calleeBtn = panel.contentEl.querySelector<HTMLButtonElement>(".te-relation-link")!;
+    expect(calleeBtn.textContent).toBe("middle_fn");
+    calleeBtn.click();
+    await vi.waitFor(() => expect(panel.contentEl.querySelector(".te-function-detail h3")?.textContent).toBe("middle_fn"));
+    expect(edges[0]?.hasAttribute("data-active")).toBe(true);
+    expect(edges[1]?.hasAttribute("data-active")).toBe(true);
+  });
 });

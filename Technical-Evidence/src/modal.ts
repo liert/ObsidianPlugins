@@ -55,7 +55,7 @@ export class EvidenceModal extends FloatingPanel {
   private async loadContent(): Promise<void> {
     const generation = ++this.generation;
     this.reset();
-    this.contentEl.createEl("p", { text: "正在加载证据…", attr: { role: "status" } });
+    this.contentEl.createEl("p", { text: "正在加载证据…", cls: "te-loading", attr: { role: "status" } });
     try {
       const result = await this.repository.load(this.reference, this.sourcePath);
       if (this.closed || generation !== this.generation) return;
@@ -66,9 +66,10 @@ export class EvidenceModal extends FloatingPanel {
       if (this.closed || generation !== this.generation) return;
       this.reset();
       this.renderToolbar();
-      this.contentEl.createEl("p", { text: error instanceof Error ? error.message : "读取证据失败。", cls: "te-error", attr: { role: "alert" } });
-      this.contentEl.createEl("p", { text: `${this.reference.path || "默认数据库"}${this.reference.fragment ? `#${this.reference.fragment}` : ""}`, cls: "te-source" });
-      this.contentEl.createEl("button", { text: "重试" }).addEventListener("click", () => { void this.loadContent(); });
+      const errorBox = this.contentEl.createDiv("te-error-card");
+      errorBox.createEl("p", { text: error instanceof Error ? error.message : "读取证据失败。", cls: "te-error", attr: { role: "alert" } });
+      errorBox.createEl("p", { text: `${this.reference.path || "默认数据库"}${this.reference.fragment ? `#${this.reference.fragment}` : ""}`, cls: "te-source" });
+      errorBox.createEl("button", { text: "重试", cls: "te-retry-btn" }).addEventListener("click", () => { void this.loadContent(); });
     }
   }
 
@@ -93,7 +94,7 @@ export class EvidenceModal extends FloatingPanel {
   private renderToolbar(path?: string): void {
     const toolbar = this.contentEl.createDiv("te-toolbar");
     if (this.history.length) {
-      toolbar.createEl("button", { text: "← 返回", attr: { "aria-label": "返回上一条证据" } }).addEventListener("click", () => {
+      toolbar.createEl("button", { text: "← 返回", cls: "te-toolbar-btn te-back-btn", attr: { "aria-label": "返回上一条证据" } }).addEventListener("click", () => {
         const previous = this.history.pop()!;
         this.reference = previous.reference;
         this.sourcePath = previous.sourcePath;
@@ -103,7 +104,7 @@ export class EvidenceModal extends FloatingPanel {
       });
     }
     toolbar.createEl("span", { text: (path ?? this.reference.path) || "默认数据库", cls: "te-source" });
-    toolbar.createEl("button", { text: "刷新", attr: { "aria-label": "重新读取证据文件" } }).addEventListener("click", () => {
+    toolbar.createEl("button", { text: "刷新", cls: "te-toolbar-btn te-refresh-btn", attr: { "aria-label": "重新读取证据文件" } }).addEventListener("click", () => {
       this.restoreScrollTop = this.contentEl.scrollTop;
       void this.loadContent();
     });
@@ -202,12 +203,16 @@ export class EvidenceModal extends FloatingPanel {
     const graph = svgElement("svg", { width: layout.width, height: layout.height, role: "group", "aria-label": "函数调用关系图" });
     graphContainer.appendChild(graph);
     const markerId = `te-arrow-${++graphNumber}`;
+    const activeMarkerId = `${markerId}-active`;
     const defs = svgElement("defs");
     const marker = svgElement("marker", { id: markerId, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" });
     marker.appendChild(svgElement("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "te-arrow" }));
-    defs.appendChild(marker);
+    const activeMarker = svgElement("marker", { id: activeMarkerId, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" });
+    activeMarker.appendChild(svgElement("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "te-arrow te-arrow-active" }));
+    defs.append(marker, activeMarker);
     graph.appendChild(defs);
     const positions = new Map(layout.nodes.map(node => [node.node.id, node]));
+    const edgeElements: { from: string; to: string; path: SVGPathElement }[] = [];
     for (const edge of chain.edges) {
       const from = positions.get(edge.from)!;
       const to = positions.get(edge.to)!;
@@ -234,22 +239,33 @@ export class EvidenceModal extends FloatingPanel {
       title.textContent = `${from.node.label} → ${to.node.label}${edge.label ? `：${edge.label}` : ""}`;
       path.appendChild(title);
       graph.appendChild(path);
+      edgeElements.push({ from: edge.from, to: edge.to, path });
     }
     const nodeElements = new Map<string, SVGGElement>();
     const selectNode = async (node: CallNode): Promise<void> => {
       for (const [id, element] of nodeElements) element.setAttribute("aria-pressed", String(id === node.id));
+      for (const item of edgeElements) {
+        const active = item.from === node.id || item.to === node.id;
+        item.path.toggleAttribute("data-active", active);
+        item.path.setAttribute("marker-end", `url(#${active ? activeMarkerId : markerId})`);
+      }
       component.removeChild(detailRenderer);
       detailRenderer = component.addChild(new Component());
       detail.empty();
-      const selected = detail.createDiv();
+      const selected = detail.createDiv("te-function-card");
       selected.createEl("h3", { text: node.label });
       if (node.source) selected.createEl("p", { text: node.source, cls: "te-source" });
-      if (node.description) selected.createEl("p", { text: node.description });
+      if (node.description) selected.createEl("p", { text: node.description, cls: "te-function-desc" });
       const relationships = chain.edges.filter(edge => edge.from === node.id);
       if (relationships.length) {
         const list = selected.createEl("ul", { cls: "te-relations" });
         for (const edge of relationships) {
-          list.createEl("li", { text: `→ ${positions.get(edge.to)!.node.label}${edge.label ? ` · ${edge.label}` : ""}` });
+          const targetNode = positions.get(edge.to)!.node;
+          const item = list.createEl("li");
+          item.createEl("span", { text: "→ ", cls: "te-relation-arrow" });
+          const jump = item.createEl("button", { text: targetNode.label, cls: "te-relation-link", attr: { type: "button" } });
+          jump.addEventListener("click", () => { void selectNode(targetNode); });
+          if (edge.label) item.createEl("span", { text: ` · ${edge.label}`, cls: "te-relation-label" });
         }
       }
       try {

@@ -97,6 +97,9 @@ class EvidenceSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         } catch { /* Keep the previous valid path while the user edits. */ }
       }));
-    this.containerEl.createEl("p", { text: "详细数据仅在点击时从当前仓库读取。关闭弹窗即可继续原位置阅读；修改证据文件后可在弹窗中点击刷新。" });
+    this.containerEl.createEl("p", {
+      text: "详细数据仅在点击时从当前仓库读取。关闭弹窗即可继续原位置阅读；修改证据文件后可在弹窗中点击刷新。",
+      cls: "setting-item-description te-settings-note"
+    });
   }
 }
