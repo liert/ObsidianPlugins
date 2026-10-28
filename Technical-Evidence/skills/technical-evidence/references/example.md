@@ -57,7 +57,7 @@ bind(fd, (struct sockaddr *)&addr, sizeof(addr));
 
 不要把参数覆盖分支删掉后声称端口永远固定；也不要为了附带这一个条件，在每段重复“未经实机复核”。
 
-完整的 `parse_options()`、`start_listener()` 可由读者在 IDA 或其他工具中查看，以上只摘出形成结论的相关操作。真实片段已在正文给出时，证据直接引用其位置并补充缺失的关联，不再重贴。
+完整的 `parse_options()`、`start_listener()` 可由读者在 IDA 或其他工具中查看，以上只摘出形成结论的相关操作。真实片段已在正文给出时，证据可引用其位置并补充缺失的关联；如果提供可点击调用图，关键节点仍保留本节点的决定性短摘录，不能让点击结果只剩函数名和说明。
 
 ## 避免按函数批量挂证据
 
@@ -82,3 +82,54 @@ bind(fd, (struct sockaddr *)&addr, sizeof(addr));
 如果已知 `start_listener` 分别调用 `bind` 与 `listen`，应画两条从 `start_listener` 出发的边；不能因为这两句代码先后出现，就画成 `start_listener → bind → listen`。
 
 如果一个函数的返回值决定后续行为，证据应包含返回值使用的位置。只有调用名而没有条件、参数与返回处理时，通常不足以解释业务结果。
+
+## 关键节点要能直接核对代码
+
+以下仍是人为构造的演示，不是真实样本。假设要解释“仅 SET 分支调用配置处理，处理器拒绝大于 3 的 mode，其返回值写入 result”。只画 `process_message → apply_changes` 并写这句说明，无法检验命令条件、参数来源、范围检查或返回值流向。
+
+对应 JSON 可以保留以下决定性代码，不收录整个服务的实现：
+
+```json
+{
+  "version": 1,
+  "records": {
+    "set-mode-result": {
+      "title": "SET分支的范围检查与结果传递（演示）",
+      "evidence": [
+        {
+          "title": "代码如何支持判断",
+          "kind": "markdown",
+          "content": "调用者在cmd不是CMD_SET时直接返回-2；只有SET分支将payload交给apply_changes。被调者检查payload[0]>3并返回-1，检查通过才写cfg.mode。调用者将返回值原样赋给out->result。因此范围错误会进入SET应答的result，但不说明数据已持久化或设备已执行任何实际动作。两个节点中的代码均为人为构造的示例源码。"
+        }
+      ],
+      "callChain": {
+        "nodes": [
+          {
+            "id": "dispatch",
+            "label": "process_message",
+            "source": "人为构造的demo/dispatch.c · process_message；非真实样本",
+            "description": "演示源码摘录：命令条件、调用实参与结果使用；省略无关日志",
+            "language": "c",
+            "code": "if (cmd != CMD_SET) return -2;\nint ret = apply_changes(payload);\nout->result = ret;\nreturn ret;"
+          },
+          {
+            "id": "apply",
+            "label": "apply_changes",
+            "source": "人为构造的demo/config.c · apply_changes；非真实样本",
+            "description": "演示源码摘录：范围判断在写入之前；不包含持久化逻辑",
+            "language": "c",
+            "code": "if (payload[0] > 3) return -1;\ncfg.mode = payload[0];\nreturn 0;"
+          }
+        ],
+        "edges": [
+          { "from": "dispatch", "to": "apply", "label": "cmd==CMD_SET，传入payload" }
+        ]
+      }
+    }
+  }
+}
+```
+
+检查这组证据时，可以直接对应：调用者的命令判断支持进入条件，`apply_changes(payload)` 支持调用边和实参，被调者的比较与赋值支持范围结论，`out->result = ret` 支持结果传递。若缺少被调者代码，就只能说明“调用并传入payload”，不能补写“检查范围后应用配置”。若缺少返回值使用，就不能据此说明应答怎样反映错误。
+
+这里不要求为 `return`、结构字段或每个函数名另建条目，也不要求为通用库函数复制实现。需要展示的是当前判断所依赖的实际操作；“不重复完整函数”不能解释成“关键节点不附代码”。
