@@ -8,7 +8,6 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit && node esbuild.config.mjs production",
     "package": "npm run build && node scripts/package.mjs",
-    "deploy": "npm run package && node scripts/deploy.mjs",
     "test": "vitest run",
     "check": "tsc --noEmit"
   },

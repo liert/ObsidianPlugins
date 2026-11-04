@@ -61,7 +61,7 @@ export default class TechnicalEvidencePlugin extends Plugin {
   }
 
   onunload(): void {
-    for (const modal of this.modals) modal.close();
+    for (const modal of this.modals) modal.close(true);
     this.modals.clear();
   }
 
@@ -98,7 +98,7 @@ class EvidenceSettingsTab extends PluginSettingTab {
         } catch { /* Keep the previous valid path while the user edits. */ }
       }));
     this.containerEl.createEl("p", {
-      text: "详细数据仅在点击时从当前仓库读取。关闭弹窗即可继续原位置阅读；修改证据文件后可在弹窗中点击刷新。",
+      text: "详细数据仅在点击时从当前仓库读取。证据弹窗跟随正文的预览/编辑状态，编辑后自动保存；在其他位置修改证据文件后可点击刷新。",
       cls: "setting-item-description te-settings-note"
     });
   }

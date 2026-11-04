@@ -43,6 +43,13 @@ function optionalStrings(value: Record<string, unknown>, keys: string[], at: str
   for (const key of keys) if (value[key] !== undefined) string(value[key], `${at}.${key}`);
 }
 
+export function readEditableRecord(json: string): EvidenceRecord {
+  let parsed: unknown;
+  try { parsed = JSON.parse(json); }
+  catch { throw new Error("条目不是有效的 JSON，请检查逗号、引号和括号。"); }
+  return readRecord(JSON.stringify({ version: 1, records: { entry: parsed } }), "entry");
+}
+
 export function readRecord(json: string, id: string): EvidenceRecord {
   let parsed: unknown;
   try { parsed = JSON.parse(json); }

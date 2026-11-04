@@ -3,6 +3,8 @@ import { vi } from "vitest";
 
 // Only the public boundaries used by repository/editor tests are replaced.
 export class App {}
+export class MarkdownView {}
+export class Scope { constructor(_parent?: Scope) {} }
 export class Component {
   private loaded = false;
   private cleanup: (() => void)[] = [];
@@ -31,6 +33,7 @@ export class Component {
     return child;
   }
   register(callback: () => void): void { this.cleanup.push(callback); }
+  registerEvent(event: { remove: () => void }): void { this.register(event.remove); }
   registerDomEvent(target: EventTarget, type: string, callback: EventListener, options?: AddEventListenerOptions): void {
     target.addEventListener(type, callback, options);
     this.register(() => target.removeEventListener(type, callback, options));

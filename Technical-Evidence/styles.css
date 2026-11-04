@@ -175,6 +175,87 @@
   scrollbar-width: thin;
 }
 
+.te-live-editor-host {
+  min-width: 0;
+  --file-margins: 0px;
+}
+
+.te-native-editor.markdown-source-view.mod-cm6 {
+  height: auto;
+  min-height: 120px;
+}
+
+.te-native-editor.markdown-source-view.mod-cm6 > .cm-editor > .cm-scroller {
+  padding: 0;
+  overflow: visible;
+}
+
+.te-native-editor .cm-sizer {
+  min-height: 0;
+}
+
+.te-native-editor .cm-content {
+  padding-bottom: 16px;
+}
+
+.te-code-editor.markdown-source-view.mod-cm6 {
+  padding: 12px;
+  border-radius: var(--radius-m, 8px);
+  background: var(--code-background);
+}
+
+.te-code-editor .cm-scroller,
+.te-code-editor .cm-content,
+.te-code-editor .cm-line {
+  font-family: var(--font-monospace);
+  font-size: var(--code-size);
+  line-height: 1.6;
+}
+
+.te-code-editor .cm-header,
+.te-code-editor .cm-strong,
+.te-code-editor .cm-em {
+  font: inherit;
+}
+
+.te-inline-field[type="text"] {
+  width: 100%;
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+}
+
+.te-inline-field[type="text"]:focus {
+  box-shadow: 0 1px 0 var(--interactive-accent);
+}
+
+.te-edit-status {
+  margin: 10px 0;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.te-edit-status:empty {
+  display: none;
+}
+
+.te-mode-label {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.te-retry-save-btn[hidden],
+.te-discard-btn[hidden] {
+  display: none;
+}
+
 /* Resize Handles */
 .te-resize-handle {
   position: absolute;
@@ -249,6 +330,7 @@
    ========================================================================== */
 .te-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
